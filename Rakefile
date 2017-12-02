@@ -34,22 +34,22 @@ task :benchmark, %i(without) => %i(protobuf msgpack capnproto json) do |_, args|
     json: File.size(File.expand_path('payload.json'))
   }
 
-  serialized_files = {
+  serialised_files = {
     protobuf: File.read(File.expand_path('protobuf/payload.bin')),
     msgpack: File.read(File.expand_path('msgpack/payload.bin')),
     capnp: File.read(File.expand_path('capnproto/payload.bin')),
     json: File.read(File.expand_path('payload.json'))
   }
 
-  deserialized_files = {
-    protobuf: Connections::Find::Result.decode(serialized_files[:protobuf]),
-    msgpack: MessagePack.unpack(serialized_files[:msgpack]),
+  deserialised_files = {
+    protobuf: Connections::Find::Result.decode(serialised_files[:protobuf]),
+    msgpack: MessagePack.unpack(serialised_files[:msgpack]),
     capnp: Connections2::Find::Result.new_message,
-    json: Oj.load(serialized_files[:json])
+    json: Oj.load(serialised_files[:json])
   }
 
-  data = deserialized_files[:capnp].initData(deserialized_files[:json]['data'].size)
-  deserialized_files[:json]['data'].each.with_index do |connection, index|
+  data = deserialised_files[:capnp].initData(deserialised_files[:json]['data'].size)
+  deserialised_files[:json]['data'].each.with_index do |connection, index|
     connection_message = data[index]
 
     attributes = connection['attributes']
@@ -82,34 +82,34 @@ task :benchmark, %i(without) => %i(protobuf msgpack capnproto json) do |_, args|
   end
 
   puts '                            +-------------------+'
-  puts '                            |   Deserializing   |'
+  puts '                            |   Deserialising   |'
   Benchmark.ips do |x|
     x.config(benchmark_config)
 
-    x.report('protobuf#decode') { Connections::Find::Result.decode(serialized_files[:protobuf]) }
-    x.report('msgpack#unpack') { MessagePack.unpack(serialized_files[:msgpack]) }
+    x.report('protobuf#decode') { Connections::Find::Result.decode(serialised_files[:protobuf]) }
+    x.report('msgpack#unpack') { MessagePack.unpack(serialised_files[:msgpack]) }
 
     if args[:without] != 'capnp'
-      x.report('capnp#from_bytes') { Connections2::Find::Result.make_from_bytes(serialized_files[:capnp]) }
+      x.report('capnp#from_bytes') { Connections2::Find::Result.make_from_bytes(serialised_files[:capnp]) }
     end
 
-    x.report('oj#load') { Oj.load(serialized_files[:json]) }
+    x.report('oj#load') { Oj.load(serialised_files[:json]) }
     x.compare!
   end
 
   puts '                            +-------------------+'
-  puts '                            |    Serializing    |'
+  puts '                            |    Serialising    |'
   Benchmark.ips do |x|
     x.config(benchmark_config)
 
-    x.report('protobuf#encode') { Connections::Find::Result.encode(deserialized_files[:protobuf]) }
-    x.report('msgpack#pack') { MessagePack.pack(deserialized_files[:msgpack]) }
+    x.report('protobuf#encode') { Connections::Find::Result.encode(deserialised_files[:protobuf]) }
+    x.report('msgpack#pack') { MessagePack.pack(deserialised_files[:msgpack]) }
 
     if args[:without] != 'capnp'
-      x.report('capnp#to_bytes') { deserialized_files[:capnp].to_bytes }
+      x.report('capnp#to_bytes') { deserialised_files[:capnp].to_bytes }
     end
 
-    x.report('oj#dump') { Oj.dump(deserialized_files[:json]) }
+    x.report('oj#dump') { Oj.dump(deserialised_files[:json]) }
     x.compare!
   end
 
@@ -118,17 +118,17 @@ task :benchmark, %i(without) => %i(protobuf msgpack capnproto json) do |_, args|
   Benchmark.ips do |x|
     x.config(benchmark_config)
 
-    x.report('protobuf#each.name') { deserialized_files[:protobuf].data.each { |c| c.departure_station.id } }
-    x.report('protobuf#each[name]') { deserialized_files[:protobuf]['data'].each { |c| c['departure_station']['id'] } }
+    x.report('protobuf#each.name') { deserialised_files[:protobuf].data.each { |c| c.departure_station.id } }
+    x.report('protobuf#each[name]') { deserialised_files[:protobuf]['data'].each { |c| c['departure_station']['id'] } }
 
-    x.report('msgpack#each[name]') { deserialized_files[:msgpack]['data'].each { |c| c['relationships']['departure_station']['data']['id'] } }
+    x.report('msgpack#each[name]') { deserialised_files[:msgpack]['data'].each { |c| c['relationships']['departure_station']['data']['id'] } }
 
     if args[:without] != 'capnp'
-      x.report('capnp#each.name') { deserialized_files[:capnp].data.each { |c| c.departureStation.id } }
-      x.report('capnp#each[name]') { deserialized_files[:capnp]['data'].each { |c| c['departureStation']['id'] } }
+      x.report('capnp#each.name') { deserialised_files[:capnp].data.each { |c| c.departureStation.id } }
+      x.report('capnp#each[name]') { deserialised_files[:capnp]['data'].each { |c| c['departureStation']['id'] } }
     end
 
-    x.report('oj#each[name]') { deserialized_files[:json]['data'].each { |c| c['relationships']['departure_station']['data']['id'] } }
+    x.report('oj#each[name]') { deserialised_files[:json]['data'].each { |c| c['relationships']['departure_station']['data']['id'] } }
     x.compare!
   end
 
